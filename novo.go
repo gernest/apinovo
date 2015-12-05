@@ -17,7 +17,7 @@ import (
 
 type Config struct {
 	WorkserSleep time.Duration
-	MaxWOrkers   int
+	MaxWorkers   int
 	CacheExpire  time.Duration
 	CacheClean   time.Duration
 	LinkExpire   time.Duration
@@ -84,7 +84,7 @@ func (n *Nova) setWorker(name string, worker que.WorkFunc) {
 }
 
 func (n *Nova) startWorkers() {
-	workers := que.NewWorkerPool(n.queue, n.workerMap, n.cfg.MaxWOrkers)
+	workers := que.NewWorkerPool(n.queue, n.workerMap, n.cfg.MaxWorkers)
 	go workers.Start()
 END:
 	for {
@@ -144,6 +144,8 @@ func (n *Nova) LinkDone(link string) {
 }
 
 func (n Nova) Indexer(j *que.Job) error {
+	fmt.Printf("%#v \n", j)
+	j.Done()
 	return nil
 }
 

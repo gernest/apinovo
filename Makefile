@@ -5,5 +5,5 @@ ifeq "$(origin DB_CONN)" "undefined"
 DB_CONN=$(DEFAULT_POSTGRES_CONN)
 endif
 
-test#:
+test:
 	@DB_CONN=$(DB_CONN) go test -v -cover

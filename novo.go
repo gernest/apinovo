@@ -52,15 +52,17 @@ func NewNova(cfg *Config) (*Nova, error) {
 		AfterConnect: que.PrepareStatements,
 	})
 	if err != nil {
+		fmt.Println(err)
 		return nil, err
 	}
 	n := &Nova{
-		queue:    que.NewClient(pgxpool),
-		cfg:      cfg,
-		stop:     make(chan struct{}),
-		cache:    cache.New(cfg.CacheExpire, cfg.CacheClean),
-		pgPool:   pgxpool,
-		pgConfig: pgxcfg,
+		queue:     que.NewClient(pgxpool),
+		cfg:       cfg,
+		stop:      make(chan struct{}),
+		cache:     cache.New(cfg.CacheExpire, cfg.CacheClean),
+		pgPool:    pgxpool,
+		pgConfig:  pgxcfg,
+		workerMap: make(que.WorkMap),
 	}
 	n.Init()
 	return n, nil
@@ -78,9 +80,7 @@ func (n *Nova) Init() {
 }
 
 func (n *Nova) setWorker(name string, worker que.WorkFunc) {
-	n.mu.RLock()
 	n.workerMap[name] = worker
-	n.mu.Unlock()
 }
 
 func (n *Nova) startWorkers() {
@@ -111,7 +111,7 @@ func (n *Nova) ProcessLink(ctx *fetchbot.Context, res *http.Response, err error)
 			return
 		}
 		if !n.LinkDuplicate(u.String()) {
-			if _, err := ctx.Q.SendStringHead(u.String()); err != nil {
+			if _, err := ctx.Q.SendStringGet(u.String()); err != nil {
 				fmt.Printf("error: enqueue head %s - %s\n", u, err)
 			} else {
 				n.LinkDone(u.String())
@@ -144,7 +144,6 @@ func (n *Nova) LinkDone(link string) {
 }
 
 func (n Nova) Indexer(j *que.Job) error {
-	fmt.Printf("%#v \n", j)
 	j.Done()
 	return nil
 }
@@ -152,4 +151,5 @@ func (n Nova) Indexer(j *que.Job) error {
 func (n *Nova) ShutDown() {
 	n.stop <- struct{}{}
 	n.Q.Close()
+	n.pgPool.Close()
 }
